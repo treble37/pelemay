@@ -63,6 +63,34 @@ defmodule Pelemay.Zeam do
   end
 
   defcombinatorp(
+    :enif_make_int64,
+    string("enif_make_int64")
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> ignore(string("("))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> concat(ascii_string([?a..?z, ?A..?Z, ?0..?9, ?_, ?.], min: 1))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> ignore(string(","))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> parsec(:expression)
+    |> ignore(string(")"))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> post_traverse(:match_and_emit_enif_make_int64)
+  )
+
+  defp match_and_emit_enif_make_int64(
+         _rest,
+         [value, env, "enif_make_int64"],
+         context,
+         _line,
+         _offset
+       ) do
+    {[
+       {:enif_make_int64, [], [{String.to_atom(env), [], :c_val}, value]}
+     ], context}
+  end
+
+  defcombinatorp(
     :expression,
     choice([
       parsec(:term)
@@ -80,7 +108,8 @@ defmodule Pelemay.Zeam do
       |> tag(:-)
       |> post_traverse(:match_and_emit_minus),
       parsec(:term),
-      parsec(:enif_make_badarg)
+      parsec(:enif_make_badarg),
+      parsec(:enif_make_int64)
     ])
   )
 
