@@ -113,10 +113,44 @@ defmodule Pelemay.Zeam do
   end
 
   defcombinatorp(
+    :enif_get_int64,
+    string("enif_get_int64")
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> ignore(string("("))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> parsec(:variable)
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> ignore(string(","))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> parsec(:expression)
+    |> ignore(string(","))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> ignore(string("&"))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> parsec(:expression)
+    |> ignore(string(")"))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
+    |> post_traverse(:match_and_emit_enif_get_int64)
+  )
+
+  defp match_and_emit_enif_get_int64(
+         _rest,
+         [var2, var1, env, "enif_get_int64"],
+         context,
+         _line,
+         _offset
+       ) do
+    {[
+       {:enif_get_int64, [], [env, var1, var2]}
+     ], context}
+  end
+
+  defcombinatorp(
     :expression,
     choice([
       parsec(:enif_make_badarg),
       parsec(:enif_make_int64),
+      parsec(:enif_get_int64),
       parsec(:term)
       |> ignore(repeat(ascii_char([?\s])))
       |> ignore(ascii_char([?+]))
