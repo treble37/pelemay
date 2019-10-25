@@ -12,6 +12,16 @@ defmodule Pelemay.Zeam do
   end
 
   defcombinatorp(
+    :variable,
+    ascii_string([?a..?z, ?A..?Z, ?0..?9, ?_, ?.], min: 1)
+    |> post_traverse(:match_and_emit_variable)
+  )
+
+  defp match_and_emit_variable(_rest, [variable], context, _line, _offset) do
+    {[{String.to_atom(variable), [], :c_var}], context}
+  end
+
+  defcombinatorp(
     :factor,
     choice([
       ignore(ascii_char([?(]))
@@ -19,7 +29,8 @@ defmodule Pelemay.Zeam do
       |> concat(parsec(:expression))
       |> ignore(repeat(ascii_char([?\s])))
       |> ignore(ascii_char([?)])),
-      parsec(:integer)
+      parsec(:integer),
+      parsec(:variable)
     ])
   )
 
@@ -49,7 +60,7 @@ defmodule Pelemay.Zeam do
     |> ignore(repeat(ascii_char([?\s, ?\n])))
     |> ignore(string("("))
     |> ignore(repeat(ascii_char([?\s, ?\n])))
-    |> concat(ascii_string([?a..?z, ?A..?Z, ?0..?9, ?_, ?.], min: 1))
+    |> parsec(:variable)
     |> ignore(repeat(ascii_char([?\s, ?\n])))
     |> ignore(string(")"))
     |> ignore(repeat(ascii_char([?\s, ?\n])))
@@ -58,7 +69,7 @@ defmodule Pelemay.Zeam do
 
   defp match_and_emit_enif_make_badarg(_rest, [val, "enif_make_badarg"], context, _line, _offset) do
     {[
-       {:enif_make_badarg, [], [{String.to_atom(val), [], :c_val}]}
+       {:enif_make_badarg, [], val}
      ], context}
   end
 
@@ -68,7 +79,7 @@ defmodule Pelemay.Zeam do
     |> ignore(repeat(ascii_char([?\s, ?\n])))
     |> ignore(string("("))
     |> ignore(repeat(ascii_char([?\s, ?\n])))
-    |> concat(ascii_string([?a..?z, ?A..?Z, ?0..?9, ?_, ?.], min: 1))
+    |> parsec(:variable)
     |> ignore(repeat(ascii_char([?\s, ?\n])))
     |> ignore(string(","))
     |> ignore(repeat(ascii_char([?\s, ?\n])))
@@ -86,13 +97,15 @@ defmodule Pelemay.Zeam do
          _offset
        ) do
     {[
-       {:enif_make_int64, [], [{String.to_atom(env), [], :c_val}, value]}
+       {:enif_make_int64, [], [env, value]}
      ], context}
   end
 
   defcombinatorp(
     :expression,
     choice([
+      parsec(:enif_make_badarg),
+      parsec(:enif_make_int64),
       parsec(:term)
       |> ignore(repeat(ascii_char([?\s])))
       |> ignore(ascii_char([?+]))
@@ -107,9 +120,7 @@ defmodule Pelemay.Zeam do
       |> concat(parsec(:expression))
       |> tag(:-)
       |> post_traverse(:match_and_emit_minus),
-      parsec(:term),
-      parsec(:enif_make_badarg),
-      parsec(:enif_make_int64)
+      parsec(:term)
     ])
   )
 
