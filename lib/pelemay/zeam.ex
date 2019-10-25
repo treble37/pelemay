@@ -12,8 +12,18 @@ defmodule Pelemay.Zeam do
   end
 
   defcombinatorp(
+    :macro,
+    ascii_string([?A..?Z, ?0..?9, ?_], min: 1)
+    |> post_traverse(:match_and_emit_macro)
+  )
+
+  defp match_and_emit_macro(_rest, [variable], context, _line, _offset) do
+    {[{String.to_atom(variable), [], :macro}], context}
+  end
+
+  defcombinatorp(
     :variable,
-    ascii_string([?a..?z, ?A..?Z, ?0..?9, ?_, ?.], min: 1)
+    ascii_string([?a..?z, ?A..?Z, ?0..?9, ?_], min: 1)
     |> post_traverse(:match_and_emit_variable)
   )
 
@@ -30,6 +40,7 @@ defmodule Pelemay.Zeam do
       |> ignore(repeat(ascii_char([?\s])))
       |> ignore(ascii_char([?)])),
       parsec(:integer),
+      parsec(:macro),
       parsec(:variable)
     ])
   )
