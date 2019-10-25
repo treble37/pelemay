@@ -211,11 +211,11 @@ defmodule Pelemay.Zeam do
   defcombinatorp(
     :statement,
     choice([
+      parsec(:return),
       parsec(:expression)
       |> ignore(repeat(ascii_char([?\s, ?\r])))
       |> ignore(ascii_char([?;]))
-      |> ignore(repeat(ascii_char([?\s, ?\r]))),
-      parsec(:return)
+      |> ignore(repeat(ascii_char([?\s, ?\r])))
     ])
   )
 
