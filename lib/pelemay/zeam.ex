@@ -183,16 +183,14 @@ defmodule Pelemay.Zeam do
 
   defcombinatorp(
     :return,
-    choice([
-      string("return")
-      |> ignore(repeat(ascii_char([?\s, ?\r])))
+    string("return")
+    |> choice([
+      ignore(repeat(ascii_char([?\s, ?\r])))
       |> parsec(:expression)
-      |> ignore(repeat(ascii_char([?\s, ?\r])))
-      |> ignore(ascii_char([?;]))
       |> ignore(repeat(ascii_char([?\s, ?\r]))),
-      string("return")
-      |> ignore(repeat(ascii_char([?\s, ?\r])))
+      ignore(string(""))
     ])
+    |> ignore(repeat(ascii_char([?\s, ?\r])))
     |> post_traverse(:match_and_emit_return)
   )
 
@@ -213,19 +211,20 @@ defmodule Pelemay.Zeam do
     choice([
       parsec(:return),
       parsec(:expression)
-      |> ignore(repeat(ascii_char([?\s, ?\r])))
-      |> ignore(ascii_char([?;]))
-      |> ignore(repeat(ascii_char([?\s, ?\r])))
     ])
+    |> ignore(repeat(ascii_char([?\s, ?\r])))
+    |> ignore(ascii_char([?;]))
+    |> ignore(repeat(ascii_char([?\s, ?\r])))
   )
 
   defcombinatorp(
     :block,
     ignore(ascii_char([?{]))
-    |> ignore(repeat(ascii_char([?\s, ?\r])))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
     |> repeat(parsec(:statement))
-    |> ignore(repeat(ascii_char([?\s, ?\r])))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
     |> ignore(ascii_char([?}]))
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
     |> post_traverse(:match_and_emit_block)
   )
 
@@ -248,6 +247,7 @@ defmodule Pelemay.Zeam do
         |> string("\"")
       ])
     )
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
     |> post_traverse(:match_and_emit_include)
   )
 
@@ -267,6 +267,7 @@ defmodule Pelemay.Zeam do
     |> concat(ascii_string([?a..?z, ?A..?Z, ?0..?9, ?_, ?.], min: 1))
     |> ignore(repeat(ascii_char([?\s])))
     |> parsec(:expression)
+    |> ignore(repeat(ascii_char([?\s, ?\n])))
     |> post_traverse(:match_and_emit_define)
   )
 
@@ -340,27 +341,23 @@ defmodule Pelemay.Zeam do
 
   defparsec(
     :clang,
-    choice([
-      parsec(:include),
-      parsec(:define),
-      parsec(:defunc)
-    ])
+    repeat(
+      choice([
+        parsec(:include),
+        parsec(:define),
+        parsec(:defunc)
+      ])
+    )
   )
 
   @doc """
-    ## Examples
+  	## Examples
 
-    iex> Pelemay.Zeam.map_to_zeam_ir(["#include <stdio.h>"]) |> Enum.to_list
-    [{:include, [], "stdio.h"}]
+  	iex> Pelemay.Zeam.to_zeam_ir("#include <stdio.h>")
+  	[{:include, [], "stdio.h"}]
   """
-  def map_to_zeam_ir(c_src_stream) do
-    c_src_stream
-    |> Stream.map(&String.trim/1)
-    |> Stream.map(&to_zeam_ir/1)
-  end
-
-  defp to_zeam_ir(str) do
-    {:ok, [result], "", %{}, _, _} = clang(str)
+  def to_zeam_ir(str) do
+    {:ok, result, "", %{}, _, _} = clang(str)
     result
   end
 
