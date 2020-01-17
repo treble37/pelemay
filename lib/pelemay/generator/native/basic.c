@@ -3,22 +3,22 @@ const int success = 1;
 const int empty = 0;
 const size_t cache_line_size = 64;
 const size_t size_t_max = -1;
-const size_t init_size_long = cache_line_size / sizeof(long);
-const size_t init_size_double = cache_line_size / sizeof(double);
-const size_t size_t_highest_bit = ~(size_t_max >> 1);
+#define INIT_SIZE_INT64 (cache_line_size / sizeof(ErlNifSInt64))
+#define INIT_SIZE_DOUBLE (cache_line_size / sizeof(double))
+#define SIZE_T_HIGHEST_BIT (~(size_t_max >> 1))
 
 #define loop_vectorize_width 4
 
-int enif_get_long_vec_from_list(ErlNifEnv *env, ERL_NIF_TERM list, long **vec, size_t *vec_l);
+int enif_get_int64_vec_from_list(ErlNifEnv *env, ERL_NIF_TERM list, ErlNifSInt64 **vec, size_t *vec_l);
 int enif_get_double_vec_from_list(ErlNifEnv *env, ERL_NIF_TERM list, double **vec, size_t *vec_l);
 int enif_get_double_vec_from_number_list(ErlNifEnv *env, ERL_NIF_TERM list, double **vec, size_t *vec_l);
-int enif_get_range(ErlNifEnv *env, ERL_NIF_TERM list, long *from, long *to);
+int enif_get_range(ErlNifEnv *env, ERL_NIF_TERM list, ErlNifSInt64 *from, ErlNifSInt64 *to);
 
-ERL_NIF_TERM enif_make_list_from_long_vec(ErlNifEnv *env, const long *vec, const size_t vec_l);
+ERL_NIF_TERM enif_make_list_from_int64_vec(ErlNifEnv *env, const ErlNifSInt64 *vec, const size_t vec_l);
 ERL_NIF_TERM enif_make_list_from_double_vec(ErlNifEnv *env, const double *vec, const size_t vec_l);
 
 ERL_NIF_TERM
-enif_make_list_from_long_vec(ErlNifEnv *env, const long *vec, const size_t vec_l)
+enif_make_list_from_int64_vec(ErlNifEnv *env, const ErlNifSInt64 *vec, const size_t vec_l)
 {
   ERL_NIF_TERM list = enif_make_list(env, 0);
   for(size_t i = vec_l; i > 0; i--) {
@@ -42,7 +42,7 @@ enif_make_list_from_double_vec(ErlNifEnv *env, const double *vec, const size_t v
 }
 
 int
-enif_get_long_vec_from_list(ErlNifEnv *env, ERL_NIF_TERM list, long **vec, size_t *vec_l)
+enif_get_int64_vec_from_list(ErlNifEnv *env, ERL_NIF_TERM list, ErlNifSInt64 **vec, size_t *vec_l)
 {
   ERL_NIF_TERM head, tail;
 
@@ -53,7 +53,7 @@ enif_get_long_vec_from_list(ErlNifEnv *env, ERL_NIF_TERM list, long **vec, size_
       *vec = NULL;
       return success;
     }
-    long from, to;
+    ErlNifSInt64 from, to;
     if (__builtin_expect((enif_get_range(env, list, &from, &to) == fail), false)) {
       return fail;
     }
@@ -62,26 +62,26 @@ enif_get_long_vec_from_list(ErlNifEnv *env, ERL_NIF_TERM list, long **vec, size_
     } else {
       *vec_l = (size_t)(from - to + 1);
     }
-    *vec = (long *)enif_alloc(sizeof(long) * *vec_l);
+    *vec = (ErlNifSInt64 *)enif_alloc(sizeof(ErlNifSInt64) * *vec_l);
     if (__builtin_expect((*vec == NULL), false)) {
       return fail;
     }
     if (__builtin_expect((from <= to), true)) {
 //#pragma clang loop vectorize(enable)
       for(size_t i = 0; i < *vec_l; i++) {
-        *(*vec + i) = from + (long) i;
+        *(*vec + i) = from + (ErlNifSInt64) i;
       }
     } else {
 //#pragma clang loop vectorize(enable)
       for(size_t i = 0; i < *vec_l; i++) {
-        *(*vec + i) = from - (long) i;
+        *(*vec + i) = from - (ErlNifSInt64) i;
       }
     }
     return success;
   }
-  size_t n = init_size_long;
+  size_t n = INIT_SIZE_INT64;
   size_t nn = cache_line_size;
-  long *t = (long *)enif_alloc(nn);
+  ErlNifSInt64 *t = (ErlNifSInt64 *)enif_alloc(nn);
   if (__builtin_expect((t == NULL), false)) {
     return fail;
   }
@@ -119,14 +119,14 @@ enif_get_long_vec_from_list(ErlNifEnv *env, ERL_NIF_TERM list, long **vec, size_
     }
     if (__builtin_expect((i + loop_vectorize_width > n), false)) {
       size_t old_nn = nn;
-      if (__builtin_expect(((nn & size_t_highest_bit) == 0), true)) {
+      if (__builtin_expect(((nn & SIZE_T_HIGHEST_BIT) == 0), true)) {
         nn <<= 1;
         n <<= 1;
       } else {
         nn = size_t_max;
-        n = nn / sizeof(long);
+        n = nn / sizeof(ErlNifSInt64);
       }
-      long *new_t = (long *)enif_alloc(nn);
+      ErlNifSInt64 *new_t = (ErlNifSInt64 *)enif_alloc(nn);
       if(__builtin_expect((new_t == NULL), false)) {
         enif_free(t);
         return fail;
@@ -166,7 +166,7 @@ enif_get_double_vec_from_list(ErlNifEnv *env, ERL_NIF_TERM list, double **vec, s
     }
     return fail;
   }
-  size_t n = init_size_long;
+  size_t n = INIT_SIZE_INT64;
   size_t nn = cache_line_size;
   double *t = (double *)enif_alloc(nn);
   if (__builtin_expect((t == NULL), false)) {
@@ -206,12 +206,12 @@ enif_get_double_vec_from_list(ErlNifEnv *env, ERL_NIF_TERM list, double **vec, s
     }
     if (__builtin_expect((i + loop_vectorize_width > n), false)) {
       size_t old_nn = nn;
-      if (__builtin_expect(((nn & size_t_highest_bit) == 0), true)) {
+      if (__builtin_expect(((nn & SIZE_T_HIGHEST_BIT) == 0), true)) {
         nn <<= 1;
         n <<= 1;
       } else {
         nn = size_t_max;
-        n = nn / sizeof(long);
+        n = nn / sizeof(ErlNifSInt64);
       }
       double *new_t = (double *)enif_alloc(nn);
       if(__builtin_expect((new_t == NULL), false)) {
@@ -253,7 +253,7 @@ enif_get_double_vec_from_number_list(ErlNifEnv *env, ERL_NIF_TERM list, double *
     }
     return fail;
   }
-  size_t n = init_size_long;
+  size_t n = INIT_SIZE_INT64;
   size_t nn = cache_line_size;
   double *t = (double *)enif_alloc(nn);
   if (__builtin_expect((t == NULL), false)) {
@@ -263,7 +263,7 @@ enif_get_double_vec_from_number_list(ErlNifEnv *env, ERL_NIF_TERM list, double *
   size_t i = 0;
   while (true) {
     if (__builtin_expect((enif_get_double(env, head, &t[i]) == fail), false)) {
-      long tmp;
+      ErlNifSInt64 tmp;
       if (__builtin_expect((enif_get_int64(env, head, &tmp) == fail), false)) {
         enif_free(t);
         return fail;
@@ -279,12 +279,12 @@ enif_get_double_vec_from_number_list(ErlNifEnv *env, ERL_NIF_TERM list, double *
     }
     if (__builtin_expect((i >= n), false)) {
       size_t old_nn = nn;
-      if (__builtin_expect(((nn & size_t_highest_bit) == 0), true)) {
+      if (__builtin_expect(((nn & SIZE_T_HIGHEST_BIT) == 0), true)) {
         nn <<= 1;
         n <<= 1;
       } else {
         nn = size_t_max;
-        n = nn / sizeof(long);
+        n = nn / sizeof(ErlNifSInt64);
       }
       double *new_t = (double *)enif_alloc(nn);
       if (__builtin_expect((new_t == NULL), false)) {
@@ -299,7 +299,7 @@ enif_get_double_vec_from_number_list(ErlNifEnv *env, ERL_NIF_TERM list, double *
 }
 
 int
-enif_get_range(ErlNifEnv *env, ERL_NIF_TERM map, long *from, long *to)
+enif_get_range(ErlNifEnv *env, ERL_NIF_TERM map, ErlNifSInt64 *from, ErlNifSInt64 *to)
 {
   ERL_NIF_TERM value; 
   if(__builtin_expect((enif_get_map_value(env, map, atom_struct, &value) == fail), false)) {

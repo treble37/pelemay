@@ -4,7 +4,7 @@ defmodule Pelemay.MixProject do
   def project do
     [
       app: :pelemay,
-      version: "0.0.4",
+      version: "0.0.5",
       elixir: "~> 1.9",
       start_permanent: Mix.env() == :prod,
       description: description(),
@@ -13,7 +13,8 @@ defmodule Pelemay.MixProject do
       docs: [
         api_reference: false,
         main: "Pelemay"
-      ]
+      ],
+      elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
 
@@ -29,7 +30,8 @@ defmodule Pelemay.MixProject do
     [
       {:nimble_parsec, "~> 0.5"},
       # Docs dependencies
-      {:ex_doc, ">= 0.0.0", only: :dev}
+      {:ex_doc, ">= 0.0.0", only: :dev},
+      {:mix_test_watch, "~> 1.0", only: :dev, runtime: false}
     ]
   end
 
@@ -58,4 +60,7 @@ defmodule Pelemay.MixProject do
       ]
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 end

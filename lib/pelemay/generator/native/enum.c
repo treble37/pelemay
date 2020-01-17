@@ -4,7 +4,7 @@ chunk_every(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
   if (__builtin_expect((argc != 2), false)) {
     return enif_make_badarg(env);
   }
-  unsigned long c;
+  ErlNifUInt64 c;
   if (__builtin_expect((enif_get_uint64(env, argv[1], &c) == fail), false)) {
     return enif_make_badarg(env);
   }
@@ -12,7 +12,7 @@ chunk_every(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
   if(count > size_t_max / sizeof(ERL_NIF_TERM)) {
     return enif_make_badarg(env);
   }
-  long first, last;
+  ErlNifSInt64 first, last;
   if(__builtin_expect((enif_get_range(env, argv[0], &first, &last) == success), false)) {
     if(__builtin_expect((first == last), false)) {
       ERL_NIF_TERM value = enif_make_int64(env, first);
@@ -31,8 +31,8 @@ chunk_every(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
       return enif_make_badarg(env);
     }
     if(__builtin_expect((first < last), true)) {
-      unsigned long c = 0;
-      for(long i = first; i <= last; i++) {
+      ErlNifUInt64 c = 0;
+      for(ErlNifSInt64 i = first; i <= last; i++) {
         if(c >= count) {
           ERL_NIF_TERM l = enif_make_list(env, 0);
           for(; c > 0; c--) {
@@ -41,7 +41,7 @@ chunk_every(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
           ll[li++] = l;
           if (__builtin_expect((li >= n), false)) {
             size_t old_nn = nn;
-            if (__builtin_expect(((nn & size_t_highest_bit) == 0), true)) {
+            if (__builtin_expect(((nn & SIZE_T_HIGHEST_BIT) == 0), true)) {
               nn <<= 1;
               n <<= 1;
             } else {
@@ -74,8 +74,8 @@ chunk_every(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
       enif_free(t);
       return l;
     } else {
-      unsigned long c = 0;
-      for(long i = first; i >= last; i--) {
+      ErlNifUInt64 c = 0;
+      for(ErlNifSInt64 i = first; i >= last; i--) {
         if(c >= count) {
           ERL_NIF_TERM l = enif_make_list(env, 0);
           for(; c > 0; c--) {
@@ -84,7 +84,7 @@ chunk_every(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
           ll[li++] = l;
           if (__builtin_expect((li >= n), false)) {
             size_t old_nn = nn;
-            if (__builtin_expect(((nn & size_t_highest_bit) == 0), true)) {
+            if (__builtin_expect(((nn & SIZE_T_HIGHEST_BIT) == 0), true)) {
               nn <<= 1;
               n <<= 1;
             } else {
@@ -165,7 +165,7 @@ chunk_every(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     ll[li++] = l;
     if (__builtin_expect((li >= n), false)) {
       size_t old_nn = nn;
-      if (__builtin_expect(((nn & size_t_highest_bit) == 0), true)) {
+      if (__builtin_expect(((nn & SIZE_T_HIGHEST_BIT) == 0), true)) {
         nn <<= 1;
         n <<= 1;
       } else {

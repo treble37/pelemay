@@ -7,7 +7,7 @@ defmodule Optimizer do
   @term_options [enum: true]
 
   @doc """
-  Optimize funcions which be enclosed `defptermay`, using `optimize_***` function.
+  Optimize funcions which be enclosed `defpelemay`, using `optimize_***` function.
   Input is funcion definitions.
   ```
   quote do
@@ -49,11 +49,11 @@ defmodule Optimizer do
   end
   ```
   """
-  def optimize_func({def_key, meta, [arg_info, exprs]}) do
+  def optimize_func({def_key, meta, [arg_info, exprs]} = ast) do
     case def_key do
       :def -> {:def, meta, [arg_info, optimize_exprs(exprs)]}
       :defp -> {:defp, meta, [arg_info, optimize_exprs(exprs)]}
-      _ -> raise ArgumentError
+      _ -> raise ArgumentError, message: Macro.to_string(ast)
     end
   end
 
@@ -102,7 +102,6 @@ defmodule Optimizer do
   Input is a term:
   ```
   quote do: list
-  quote do: list
   quote do: Enum.map(&(&1*2))
   ```
   """
@@ -113,6 +112,16 @@ defmodule Optimizer do
       term,
       fn opt, acc -> parallelize_term(acc, opt) end
     )
+  end
+
+  def parallelize_term({atom, _, nil} = arg, _)
+      when is_atom(atom) do
+    arg
+  end
+
+  def parallelize_term({atom, [], _} = arg, _)
+      when is_atom(atom) do
+    arg
   end
 
   def parallelize_term(term, {:enum, true}), do: Optimizer.Enum.parallelize_term(term)
